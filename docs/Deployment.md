@@ -5,7 +5,7 @@
   - [2. Standalone Deployment](#2-standalone-deployment)
     - [2.1 Download EaseProbe](#21-download-easeprobe)
     - [2.2 Configure EaseProbe](#22-configure-easeprobe)
-  - [2.3 Run EaseProbe](#23-run-easeprobe)
+    - [2.3 Run EaseProbe](#23-run-easeprobe)
   - [3. Docker Deployment](#3-docker-deployment)
   - [4. Docker-Compose Deployment](#4-docker-compose-deployment)
   - [5. Kubernetes Deployment](#5-kubernetes-deployment)
@@ -88,7 +88,7 @@ There are three parameters need your attention:
 - `settings.http.log.file`: the HTTP access log file  of EaseProbe
 
 
-## 2.3 Run EaseProbe
+### 2.3 Run EaseProbe
 
 On Linux Platform, you can configure systemd to run EaseProbe as a service.
 
@@ -309,6 +309,9 @@ metadata:
   namespace: default
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      app: easeprobe
   template:
     metadata:
       labels:
@@ -319,18 +322,16 @@ spec:
         image: megaease/easeprobe
         ports:
         - containerPort: 8181
-
-      volumeMounts:
-        - mountPath: /opt/config.yaml
-          name: configmap-volume-0
-          subPath: config.yaml
-        - mountPath: /opt/data
-          name: pvc-volume-easeprobe-pvc
-
-     volumes:
-      - configMap:
-        name: configmap-volume-0
-          name: easeprobe
+        volumeMounts:
+          - mountPath: /opt/config.yaml
+            name: configmap-volume-0
+            subPath: config.yaml
+          - mountPath: /opt/data
+            name: pvc-volume-easeprobe-pvc
+      volumes:
+      - name: configmap-volume-0
+        configMap:
+          name: easeprobe-conf
           items:
           - key: config.yaml
             path: config.yaml

@@ -21,14 +21,17 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/megaease/easeprobe/channel"
 	"github.com/megaease/easeprobe/conf"
 	"github.com/megaease/easeprobe/global"
 	"github.com/megaease/easeprobe/probe"
-	log "github.com/sirupsen/logrus"
 )
 
 func configProbers(probers []probe.Prober) []probe.Prober {
+	conf.MergeConstLabels(probers)
+
 	gProbeConf := global.ProbeSettings{
 		Interval:                      conf.Get().Settings.Probe.Interval,
 		Timeout:                       conf.Get().Settings.Probe.Timeout,
@@ -43,7 +46,7 @@ func configProbers(probers []probe.Prober) []probe.Prober {
 		if err := p.Config(gProbeConf); err != nil {
 			p.Result().Status = probe.StatusBad
 			p.Result().Message = "Bad Configuration: " + err.Error()
-			log.Errorf("Bad Probe Configuration: %v", err)
+			log.Errorf("Bad Probe Configuration for prober %s %s: %v", p.Kind(), p.Name(), err)
 			continue
 		}
 

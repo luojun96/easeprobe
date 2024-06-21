@@ -22,7 +22,6 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -44,7 +43,7 @@ const (
 var (
 	// Ver is the program version
 	// It will be set by the build script
-	// go build -ldflags "-X github.com/megaease/easegress/pkg/global.Ver=1.0.0"
+	// go build -ldflags "-X github.com/megaease/easeprobe/global.Ver=1.0.0"
 	Ver = "v1.7.0"
 	//OrgProg combine organization and program
 	OrgProg = Org + " " + DefaultProg
@@ -200,7 +199,7 @@ func (t *TLS) Config() (*tls.Config, error) {
 		return nil, nil
 	}
 
-	cert, err := ioutil.ReadFile(t.CA)
+	cert, err := os.ReadFile(t.CA)
 	if err != nil {
 		return nil, err
 	}

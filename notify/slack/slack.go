@@ -21,7 +21,7 @@ package slack
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/megaease/easeprobe/global"
@@ -70,16 +70,13 @@ func (c *NotifyConfig) SendSlackNotification(msg string) error {
 
 	defer resp.Body.Close()
 
-	buf, err := ioutil.ReadAll(resp.Body)
+	buf, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
 	if resp.StatusCode != 200 {
 		log.Debugf(msg)
-		return fmt.Errorf("Error response from Slack - code [%d] - msg [%s]", resp.StatusCode, string(buf))
+		return fmt.Errorf("Error response from Slack with request body <%s> - code [%d] - msg [%s]", msg, resp.StatusCode, string(buf))
 	}
-	// if buf.String() != "ok" {
-	// 	return errors.New("Non-ok response returned from Slack " + buf.String())
-	// }
 	return nil
 }

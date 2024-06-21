@@ -41,6 +41,7 @@ EaseProbe has the following major modules:
     - [1.9.5 Kafka](#195-kafka)
     - [1.9.6 PostgreSQL](#196-postgresql)
     - [1.9.7 Zookeeper](#197-zookeeper)
+  - [1.10 WebSocket](#110-websocket)
 - [2. Notification](#2-notification)
   - [2.1 Slack](#21-slack)
   - [2.2 Discord](#22-discord)
@@ -71,7 +72,7 @@ EaseProbe has the following major modules:
   - [6.3 Ping Probe](#63-ping-probe)
   - [6.4 TLS Probe](#64-tls-probe)
   - [6.5 Shell \& SSH Probe](#65-shell--ssh-probe)
-  - [6.6  Host Probe](#66--host-probe)
+  - [6.6 Host Probe](#66-host-probe)
 - [7. Configuration](#7-configuration)
   - [7.1 Probe Configuration](#71-probe-configuration)
   - [7.2 Notification Configuration](#72-notification-configuration)
@@ -144,6 +145,9 @@ The following is an example of the alerting interval for HTTP Probe:
   http:
     - name: Web Service
       url: http://example.com:1080
+      labels:
+        service: web_example
+        env:    wg-idc-prod
       alert:
         strategy: regular
         factor: 1
@@ -273,7 +277,9 @@ http:
   # A Website
   - name: MegaEase Website (Global)
     url: https://megaease.com
-
+    labels:
+      team:  ease
+      owner: megaease
   # Some of the Software support the HTTP Query
   - name: ElasticSearch
     url: http://elasticsearch.server:9200
@@ -494,7 +500,7 @@ Then, the extraction syntax as below:
 ```
 > Notes
 >
-> Checking the unit test case in [`eval`](./eval/) package you can find more examples.
+> Checking the unit test case in [`eval`](../eval/) package you can find more examples.
 
 ## 1.3 TCP
 
@@ -513,6 +519,8 @@ tcp:
     interval: 2m # default is 60 seconds
     proxy: socks5://proxy.server:1080 # Optional. Only support socks5.
                                       # Also support the `ALL_PROXY` environment.
+    labels:
+      env: production
   - name: Kafka
     host: kafka.server:9093
 ```
@@ -532,6 +540,9 @@ ping:
     privileged: true # if true, the ping will be executed with icmp, otherwise use udp, default: false (Note: On Windows platform, this must be set to True)
     timeout: 10s # default is 30 seconds
     interval: 2m # default is 60 seconds
+    labels:
+        env:  development
+        role: primary
 ```
 
 ## 1.5 Shell
@@ -841,6 +852,25 @@ client:
     cert: /path/to/file.crt
     key: /path/to/file.key
 ```
+## 1.10 WebSocket
+
+The websocket probe uses `websocket` identifier, it pings a websocket server with Ping/Pong message type of the WebSocket Protocol.
+
+```yaml
+websocket:
+  - name: asr-server
+    url: wss://example.com/asr/
+  - name: tts-server
+    url: wss://example.com/tts/
+    timeout: 5s
+    interval: 30s
+    headers:
+      Authorization: Bearer 2322f5d2-52d7-11ee-be56-0242ac120002
+    proxy: http://192.168.18.7
+    labels:
+      service: tts
+      idc: idc-a
+```
 
 
 
@@ -883,7 +913,7 @@ And please be aware that the following configuration:
           interval: 10s # retry interval, default is 5s
     ```
 
-For a complete list of examples using all the notifications please check the [Notification Configuration](#79-notification-configuration) section.
+For a complete list of examples using all the notifications please check the [Notification Configuration](#72-notification-configuration) section.
 
 ## 2.1 Slack
 This notification method utilizes the Slack webhooks to deliver status updates as messages.
@@ -1063,7 +1093,7 @@ Support SMS notification with multiple SMS service providers
 
 - [Twilio](https://www.twilio.com/sms)
 - [Vonage(Nexmo)](https://developer.vonage.com/messaging/sms/overview)
-- [YunPian](https://www.yunpian.com/doc/en/domestic/list.html)
+- [YunPian](https://www.yunpian.com/official/document/sms/en/domestic_list?lang=en)
 
 The plugin supports the following parameters:
  - `name`: A unique name for this notification endpoint
@@ -1110,7 +1140,7 @@ notify:
 ```
 
 ## 2.12 Shell
-Run a shell command to notify the result. (see [example](resources/scripts/notify/notify.sh))
+Run a shell command to notify the result. (see [example](../resources/scripts/notify/notify.sh))
 
 The plugin supports the following parameters:
  - `name`: A unique name for this notification endpoint
@@ -1158,7 +1188,7 @@ EaseProbe supports minutely, hourly, daily, weekly, or monthly SLA reports.
 ```YAML
 settings:
 # SLA Report schedule
-sla:
+  sla:
     #  minutely, hourly, daily, weekly (Sunday), monthly (Last Day), none
     schedule: "weekly"
     # UTC time, the format is 'hour:min:sec'
@@ -1185,7 +1215,7 @@ You can use the following URL query options for both HTML and JSON:
   - `gte`: filter the probers with SLA greater than or equal to the given percentage (ex. `?gte=50` filter only hosts with SLA percentage `>= 50%`)
   - `lte`:filter the probers with SLA less than or equal to the given percentage (ex. `?lte=90` filter only hosts with SLA percentage `<= 90%` )
 
-  Refer to the [Global Setting Configuration](#710-global-setting-configuration) to see how to configure the access log.
+  Refer to the [Global Setting Configuration](#73-global-setting-configuration) to see how to configure the access log.
 
 
 ## 3.3 SLA Data Persistence
@@ -1198,13 +1228,13 @@ When EaseProbe starts, it looks for the location of `data.yaml` and if found, lo
 
 ```YAML
 settings:
-sla:
+  sla:
     # SLA data persistence file path.
     # The default location is `$CWD/data/data.yaml`
     data: /path/to/data/file.yaml
 ```
 
-For more information, please check the [Global Setting Configuration](#710-global-setting-configuration)
+For more information, please check the [Global Setting Configuration](#73-global-setting-configuration)
 
 
 # 4. Channel
@@ -1228,34 +1258,34 @@ For example:
 ```YAML
 http:
    - name: probe A
-     channels : [ Dev_Channel, Manager_Channel ]
+     channels : [ Mgmt_Channel ]
 shell:
    - name: probe B
-     channels: [ Ops_Channel ]
+     channels: [ Dev_Channel, QA_Channel ]
 notify:
    - discord: Discord
-     channels: [ Dev_Channel, Ops_Channel ]
+     channels: [ Mgmt_Channel, Dev_Channel ]
    - email: Gmail
-     channels: [ Mgmt_Channel ]
+     channels: [ QA_Channel ]
 ```
 
 Then, we will have the following diagram
 
 ```
-┌───────┐          ┌──────────────┐
-│Probe B├─────────►│ Mgmt_Channel ├────┐
-└───────┘          └──────────────┘    │
-                                       │
-                                       │
-                   ┌─────────────┐     │   ┌─────────┐
-            ┌─────►│ Dev_Channel ├─────▼───► Discord │
-            │      └─────────────┘         └─────────┘
-┌───────┐   │
-│Probe A├───┤
-└───────┘   │
-            │      ┌────────────┐          ┌─────────┐
-            └─────►│ QA_Channel ├──────────►  Gmail  │
-                   └────────────┘          └─────────┘
+┌─────────┐        ┌──────────────┐
+│ Probe A ├───────►│ Mgmt_Channel ├──────────┐
+└─────────┘        └──────────────┘          │
+   http                                      │
+                                             │
+                   ┌──────────────┐     ┌────▼────┐
+              ┌───►│  Dev_Channel ├────►│ Discord │
+              │    └──────────────┘     └─────────┘
+┌─────────┐   │
+│ Probe B ├───┤
+└─────────┘   │
+   shell      │    ┌──────────────┐     ┌─────────┐
+              └───►│  QA_Channel  ├────►│  Gmail  │
+                   └──────────────┘     └─────────┘
 ```
 
 # 5. Administration
@@ -1268,17 +1298,17 @@ The EaseProbe would create a PID file (default `$CWD/easeprobe.pid`) when it sta
 
 ```YAML
 settings:
-pid: /var/run/easeprobe.pid
+  pid: /var/run/easeprobe.pid
 ```
 
 - If the file already exists, EaseProbe would overwrite it.
 - If the file cannot be written, EaseProbe would exit with an error.
 
-If you want to disable the PID file, you can configure the pid file to "".
+If you want to disable the PID file, you can set it to "-" or "".
 
 ```YAML
 settings:
-pid: "" # EaseProbe won't create a PID file
+  pid: "" # EaseProbe won't create a PID file
 ```
 
 ## 5.2 Log file Rotation
@@ -1319,7 +1349,7 @@ The following snapshot is the Grafana panel for host CPU metrics
 
 ![](./grafana.demo.png)
 
-Refer to the [Global Setting Configuration](#710-global-setting-configuration) for further details on how to configure the HTTP server.
+Refer to the [Global Setting Configuration](#73-global-setting-configuration) for further details on how to configure the HTTP server.
 
 ## 6.1 General Metrics
 
@@ -1377,7 +1407,7 @@ The Shell & SSH probe supports the following metrics:
   - `output_len`: length of the output
 
 
-## 6.6  Host Probe
+## 6.6 Host Probe
 
 The Host probe supports the following metrics:
 

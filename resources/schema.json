@@ -4,10 +4,14 @@
   "$ref": "#/$defs/conf_Conf",
   "$defs": {
     "BastionMapType": {
-      "patternProperties": {
-        ".*": {
-          "$ref": "#/$defs/probe_ssh_Endpoint"
-        }
+      "additionalProperties": {
+        "$ref": "#/$defs/probe_ssh_Endpoint"
+      },
+      "type": "object"
+    },
+    "Labels": {
+      "additionalProperties": {
+        "type": "string"
       },
       "type": "object"
     },
@@ -75,6 +79,14 @@
           "type": "array",
           "title": "Ping Probe",
           "description": "Ping Probe Configuration"
+        },
+        "websocket": {
+          "items": {
+            "$ref": "#/$defs/probe_websocket_WebSocket"
+          },
+          "type": "array",
+          "title": "WebSocket Probe",
+          "description": "WebSocket Probe Configuration"
         },
         "notify": {
           "$ref": "#/$defs/notify_Config",
@@ -296,7 +308,7 @@
         "pid": {
           "type": "string",
           "title": "PID File",
-          "description": "The PID file of the EaseProbe instance ('-' means no PID file)"
+          "description": "The PID file of the EaseProbe instance ('' or '-' means no PID file)"
         },
         "log": {
           "$ref": "#/$defs/conf_Log",
@@ -415,10 +427,15 @@
     "global_NotificationStrategySettings": {
       "properties": {
         "strategy": {
-          "type": "integer",
+          "type": "string",
+          "enum": [
+            "regular",
+            "increment",
+            "exponent"
+          ],
           "title": "Alert Interval Strategy",
           "description": "the notification interval strategy such as regular",
-          "default": 0
+          "default": "regular"
         },
         "factor": {
           "type": "integer",
@@ -1366,6 +1383,11 @@
           "title": "Probe Interval",
           "description": "the interval of probe"
         },
+        "labels": {
+          "$ref": "#/$defs/Labels",
+          "title": "Probe LabelMap",
+          "description": "the labels of probe"
+        },
         "failure": {
           "type": "integer",
           "title": "Failure Threshold",
@@ -1426,10 +1448,8 @@
           ]
         },
         "data": {
-          "patternProperties": {
-            ".*": {
-              "type": "string"
-            }
+          "additionalProperties": {
+            "type": "string"
           },
           "type": "object",
           "title": "Data",
@@ -1511,6 +1531,11 @@
           "type": "string",
           "title": "Probe Interval",
           "description": "the interval of probe"
+        },
+        "labels": {
+          "$ref": "#/$defs/Labels",
+          "title": "Probe LabelMap",
+          "description": "the labels of probe"
         },
         "failure": {
           "type": "integer",
@@ -1603,7 +1628,10 @@
         },
         "disks": {
           "items": {
-            "type": "string"
+            "type": "string",
+            "examples": [
+              "[\"/\""
+            ]
           },
           "type": "array",
           "title": "Disks",
@@ -1636,10 +1664,8 @@
           "description": "Disk threshold (default: 0.95)"
         },
         "load": {
-          "patternProperties": {
-            ".*": {
-              "type": "number"
-            }
+          "additionalProperties": {
+            "type": "number"
           },
           "type": "object",
           "title": "Load average threshold",
@@ -1673,6 +1699,11 @@
           "type": "string",
           "title": "Probe Interval",
           "description": "the interval of probe"
+        },
+        "labels": {
+          "$ref": "#/$defs/Labels",
+          "title": "Probe LabelMap",
+          "description": "the labels of probe"
         },
         "failure": {
           "type": "integer",
@@ -1724,10 +1755,8 @@
           "description": "HTTP method to use for HTTP requests"
         },
         "headers": {
-          "patternProperties": {
-            ".*": {
-              "type": "string"
-            }
+          "additionalProperties": {
+            "type": "string"
           },
           "type": "object",
           "title": "HTTP Headers",
@@ -1833,6 +1862,11 @@
           "title": "Probe Interval",
           "description": "the interval of probe"
         },
+        "labels": {
+          "$ref": "#/$defs/Labels",
+          "title": "Probe LabelMap",
+          "description": "the labels of probe"
+        },
         "failure": {
           "type": "integer",
           "title": "Failure Threshold",
@@ -1865,6 +1899,7 @@
         "lost": {
           "type": "number",
           "maximum": 1,
+          "minimum": 0,
           "title": "Lost Threshold",
           "description": "The threshold of packet loss",
           "default": 0
@@ -1910,6 +1945,11 @@
           "type": "string",
           "title": "Probe Interval",
           "description": "the interval of probe"
+        },
+        "labels": {
+          "$ref": "#/$defs/Labels",
+          "title": "Probe LabelMap",
+          "description": "the labels of probe"
         },
         "failure": {
           "type": "integer",
@@ -2060,6 +2100,11 @@
           "title": "Probe Interval",
           "description": "the interval of probe"
         },
+        "labels": {
+          "$ref": "#/$defs/Labels",
+          "title": "Probe LabelMap",
+          "description": "the labels of probe"
+        },
         "failure": {
           "type": "integer",
           "title": "Failure Threshold",
@@ -2178,6 +2223,11 @@
           "title": "Probe Interval",
           "description": "the interval of probe"
         },
+        "labels": {
+          "$ref": "#/$defs/Labels",
+          "title": "Probe LabelMap",
+          "description": "the labels of probe"
+        },
         "failure": {
           "type": "integer",
           "title": "Failure Threshold",
@@ -2241,6 +2291,11 @@
           "title": "Probe Interval",
           "description": "the interval of probe"
         },
+        "labels": {
+          "$ref": "#/$defs/Labels",
+          "title": "Probe LabelMap",
+          "description": "the labels of probe"
+        },
         "failure": {
           "type": "integer",
           "title": "Failure Threshold",
@@ -2302,6 +2357,81 @@
         "name",
         "alert",
         "host"
+      ]
+    },
+    "probe_websocket_WebSocket": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "Probe Name",
+          "description": "the name of probe must be unique"
+        },
+        "channels": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "title": "Probe Channels",
+          "description": "the channels of probe message need to send to"
+        },
+        "timeout": {
+          "type": "string",
+          "title": "Probe Timeout",
+          "description": "the timeout of probe"
+        },
+        "interval": {
+          "type": "string",
+          "title": "Probe Interval",
+          "description": "the interval of probe"
+        },
+        "labels": {
+          "$ref": "#/$defs/Labels",
+          "title": "Probe LabelMap",
+          "description": "the labels of probe"
+        },
+        "failure": {
+          "type": "integer",
+          "title": "Failure Threshold",
+          "description": "the failures threshold to change the status such as 3",
+          "default": 1
+        },
+        "success": {
+          "type": "integer",
+          "title": "Success Threshold",
+          "description": "the success threshold to change the status such as 2",
+          "default": 1
+        },
+        "alert": {
+          "$ref": "#/$defs/global_NotificationStrategySettings",
+          "title": "Probe Alert",
+          "description": "the alert strategy of probe"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "title": "WebSocket URL",
+          "description": "WebSocket URL to probe"
+        },
+        "proxy": {
+          "type": "string",
+          "title": "Proxy Server",
+          "description": "proxy to use for the HTTP request"
+        },
+        "headers": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object",
+          "title": "HTTP Headers",
+          "description": "HTTP headers for the initial HTTP request"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "name",
+        "alert",
+        "url"
       ]
     }
   }

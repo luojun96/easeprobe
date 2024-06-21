@@ -69,7 +69,7 @@ EaseProbe supports notification delivery to the following:
 - **SMS**. SMS notification delivery with support for multiple SMS service providers
   - [Twilio](https://www.twilio.com/sms)
   - [Vonage(Nexmo)](https://developer.vonage.com/messaging/sms/overview)
-  - [YunPain](https://www.yunpian.com/doc/en/domestic/list.html)
+  - [YunPian](https://www.yunpian.com/official/document/sms/en/domestic_list?lang=en)
 - **Log**. Write the notification into a log file or Syslog.
 - **Shell**. Run a shell command to deliver the notification (see [example](resources/scripts/notify/notify.sh))
 - **RingCentral**. Using RingCentral Webhook for notification delivery
@@ -105,7 +105,7 @@ You can get started with EaseProbe, by any of the following methods:
 
 ## 2.1 Build
 
-Compiler `Go 1.18+` (Generics Programming Support), checking the [Go Installation](https://go.dev/doc/install) to see how to install Go on your platform.
+Compiler `Go 1.21+` (Generics Programming Support), checking the [Go Installation](https://go.dev/doc/install) to see how to install Go on your platform.
 
 Use `make` to build and produce the `easeprobe` binary file. The executable is produced under the `build/bin` directory.
 

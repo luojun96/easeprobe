@@ -20,7 +20,6 @@ package lark
 import (
 	"errors"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"reflect"
 	"strings"
@@ -33,6 +32,7 @@ import (
 )
 
 func assertError(t *testing.T, err error, msg string) {
+	t.Helper()
 	assert.Error(t, err)
 	assert.Equal(t, msg, err.Error())
 }
@@ -45,7 +45,7 @@ func TestLark(t *testing.T) {
 
 	var client *http.Client
 	monkey.PatchInstanceMethod(reflect.TypeOf(client), "Do", func(_ *http.Client, req *http.Request) (*http.Response, error) {
-		r := ioutil.NopCloser(strings.NewReader(`{"StatusCode": 0}`))
+		r := io.NopCloser(strings.NewReader(`{"StatusCode": 0}`))
 		return &http.Response{
 			StatusCode: 200,
 			Body:       r,
@@ -56,27 +56,31 @@ func TestLark(t *testing.T) {
 
 	// bad response
 	monkey.PatchInstanceMethod(reflect.TypeOf(client), "Do", func(_ *http.Client, req *http.Request) (*http.Response, error) {
-		r := ioutil.NopCloser(strings.NewReader(`{"StatusCode": "100"}`))
+		r := io.NopCloser(strings.NewReader(`{"StatusCode": "100"}`))
 		return &http.Response{
 			StatusCode: 200,
 			Body:       r,
 		}, nil
 	})
 	err = conf.SendLark("title", "message")
-	assertError(t, err, "Error response from Lark - code [0] - msg []")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Error response from Lark")
+	assert.Contains(t, err.Error(), "code [0] - msg []")
 
 	monkey.PatchInstanceMethod(reflect.TypeOf(client), "Do", func(_ *http.Client, req *http.Request) (*http.Response, error) {
-		r := ioutil.NopCloser(strings.NewReader(`{"StatusCode": "100", "code": 10, "msg": "lark error"}`))
+		r := io.NopCloser(strings.NewReader(`{"StatusCode": "100", "code": 10, "msg": "lark error"}`))
 		return &http.Response{
 			StatusCode: 200,
 			Body:       r,
 		}, nil
 	})
 	err = conf.SendLark("title", "message")
-	assertError(t, err, "Error response from Lark - code [10] - msg [lark error]")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Error response from Lark")
+	assert.Contains(t, err.Error(), "code [10] - msg [lark error]")
 
 	monkey.PatchInstanceMethod(reflect.TypeOf(client), "Do", func(_ *http.Client, req *http.Request) (*http.Response, error) {
-		r := ioutil.NopCloser(strings.NewReader(`bad : json format`))
+		r := io.NopCloser(strings.NewReader(`bad : json format`))
 		return &http.Response{
 			StatusCode: 200,
 			Body:       r,
@@ -85,7 +89,7 @@ func TestLark(t *testing.T) {
 	err = conf.SendLark("title", "message")
 	assertError(t, err, "Error response from Lark [200] - [bad : json format]")
 
-	monkey.Patch(ioutil.ReadAll, func(_ io.Reader) ([]byte, error) {
+	monkey.Patch(io.ReadAll, func(_ io.Reader) ([]byte, error) {
 		return nil, errors.New("read error")
 	})
 	err = conf.SendLark("title", "message")

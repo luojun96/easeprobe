@@ -22,11 +22,13 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/megaease/easeprobe/global"
-	"github.com/megaease/easeprobe/probe/base"
 	ping "github.com/prometheus-community/pro-bing"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/megaease/easeprobe/global"
+	"github.com/megaease/easeprobe/metric"
+	"github.com/megaease/easeprobe/probe/base"
 )
 
 // Ping implements a config for ping
@@ -68,7 +70,7 @@ func (p *Ping) Config(gConf global.ProbeSettings) error {
 		p.LostThreshold = DefaultLostThreshold
 	}
 
-	p.metrics = newMetrics(kind, tag)
+	p.metrics = newMetrics(kind, tag, p.Labels)
 
 	log.Debugf("[%s / %s] configuration: %+v", p.ProbeKind, p.ProbeName, *p)
 	return nil
@@ -126,31 +128,38 @@ func (p *Ping) DoProbe() (bool, string) {
 
 // ExportMetrics export Ping metrics
 func (p *Ping) ExportMetrics(stats *ping.Statistics) {
-	p.metrics.PacketsSent.With(prometheus.Labels{
-		"name": p.ProbeName,
-	}).Add(float64(stats.PacketsSent))
+	p.metrics.PacketsSent.With(metric.AddConstLabels(prometheus.Labels{
+		"name":     p.ProbeName,
+		"endpoint": p.ProbeResult.Endpoint,
+	}, p.Labels)).Add(float64(stats.PacketsSent))
 
-	p.metrics.PacketsRecv.With(prometheus.Labels{
-		"name": p.ProbeName,
-	}).Add(float64(stats.PacketsRecv))
+	p.metrics.PacketsRecv.With(metric.AddConstLabels(prometheus.Labels{
+		"name":     p.ProbeName,
+		"endpoint": p.ProbeResult.Endpoint,
+	}, p.Labels)).Add(float64(stats.PacketsRecv))
 
-	p.metrics.PacketLoss.With(prometheus.Labels{
-		"name": p.ProbeName,
-	}).Set(stats.PacketLoss)
+	p.metrics.PacketLoss.With(metric.AddConstLabels(prometheus.Labels{
+		"name":     p.ProbeName,
+		"endpoint": p.ProbeResult.Endpoint,
+	}, p.Labels)).Set(stats.PacketLoss)
 
-	p.metrics.MaxRtt.With(prometheus.Labels{
-		"name": p.ProbeName,
-	}).Set(float64(stats.MaxRtt.Milliseconds()))
+	p.metrics.MaxRtt.With(metric.AddConstLabels(prometheus.Labels{
+		"name":     p.ProbeName,
+		"endpoint": p.ProbeResult.Endpoint,
+	}, p.Labels)).Set(float64(stats.MaxRtt.Milliseconds()))
 
-	p.metrics.MinRtt.With(prometheus.Labels{
-		"name": p.ProbeName,
-	}).Set(float64(stats.MinRtt.Milliseconds()))
+	p.metrics.MinRtt.With(metric.AddConstLabels(prometheus.Labels{
+		"name":     p.ProbeName,
+		"endpoint": p.ProbeResult.Endpoint,
+	}, p.Labels)).Set(float64(stats.MinRtt.Milliseconds()))
 
-	p.metrics.AvgRtt.With(prometheus.Labels{
-		"name": p.ProbeName,
-	}).Set(float64(stats.AvgRtt.Milliseconds()))
+	p.metrics.AvgRtt.With(metric.AddConstLabels(prometheus.Labels{
+		"name":     p.ProbeName,
+		"endpoint": p.ProbeResult.Endpoint,
+	}, p.Labels)).Set(float64(stats.AvgRtt.Milliseconds()))
 
-	p.metrics.StdDevRtt.With(prometheus.Labels{
-		"name": p.ProbeName,
-	}).Set(float64(stats.StdDevRtt.Milliseconds()))
+	p.metrics.StdDevRtt.With(metric.AddConstLabels(prometheus.Labels{
+		"name":     p.ProbeName,
+		"endpoint": p.ProbeResult.Endpoint,
+	}, p.Labels)).Set(float64(stats.StdDevRtt.Milliseconds()))
 }

@@ -20,16 +20,18 @@ package ssh
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net"
 
-	"github.com/megaease/easeprobe/global"
-	"github.com/megaease/easeprobe/probe"
-	"github.com/megaease/easeprobe/probe/base"
 	"github.com/prometheus/client_golang/prometheus"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/megaease/easeprobe/global"
+	"github.com/megaease/easeprobe/metric"
+	"github.com/megaease/easeprobe/probe"
+	"github.com/megaease/easeprobe/probe/base"
 )
 
 // Kind is the type of probe
@@ -73,7 +75,7 @@ func (bm *BastionMapType) ParseAllBastionHost() {
 		err := v.ParseHost()
 		if err != nil {
 			log.Errorf("Bastion Host error: [%s / %s] - %v", k, BastionMap[k].Host, err)
-			delete(BastionMap, k)
+			delete(*bm, k)
 			continue
 		}
 		(*bm)[k] = v
@@ -88,7 +90,7 @@ func (s *Server) Config(gConf global.ProbeSettings) error {
 	name := s.ProbeName
 	endpoint := global.CommandLine(s.Command, s.Args)
 
-	s.metrics = newMetrics(kind, tag)
+	s.metrics = newMetrics(kind, tag, s.Labels)
 
 	return s.Configure(gConf, kind, tag, name, endpoint, &BastionMap, s.DoProbe)
 
@@ -139,10 +141,10 @@ func (s *Server) DoProbe() (bool, string) {
 	message := "SSH Command has been Run Successfully!"
 
 	if err != nil {
-		if _, ok := err.(*ssh.ExitMissingError); ok {
-			s.exitCode = UnknownExitCode // Error: remote server does not send an exit status
-		} else if e, ok := err.(*ssh.ExitError); ok {
+		if e, ok := err.(*ssh.ExitError); ok {
 			s.exitCode = e.ExitStatus()
+		} else {
+			s.exitCode = UnknownExitCode
 		}
 		log.Errorf("[%s / %s] %v", s.ProbeKind, s.ProbeName, err)
 		status = false
@@ -258,22 +260,34 @@ func (s *Server) RunSSHCmd() (string, error) {
 	var stdoutBuf, stderrBuf bytes.Buffer
 	session.Stdout = &stdoutBuf
 	session.Stderr = &stderrBuf
-	if err := session.Run(env + global.CommandLine(s.Command, s.Args)); err != nil {
-		return stderrBuf.String(), err
-	}
 
-	return stdoutBuf.String(), nil
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- session.Run(env + global.CommandLine(s.Command, s.Args))
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), s.Timeout())
+	defer cancel()
+	select {
+	case <-ctx.Done():
+		session.Signal(ssh.SIGINT)
+		return fmt.Sprintf("timeout after %s", s.Timeout()), ctx.Err()
+	case err := <-errCh:
+		return stdoutBuf.String(), err
+	}
 }
 
 // ExportMetrics export shell metrics
 func (s *Server) ExportMetrics() {
-	s.metrics.ExitCode.With(prometheus.Labels{
-		"name": s.ProbeName,
-		"exit": fmt.Sprintf("%d", s.exitCode),
-	}).Inc()
+	s.metrics.ExitCode.With(metric.AddConstLabels(prometheus.Labels{
+		"name":     s.ProbeName,
+		"exit":     fmt.Sprintf("%d", s.exitCode),
+		"endpoint": s.ProbeResult.Endpoint,
+	}, s.Labels)).Inc()
 
-	s.metrics.OutputLen.With(prometheus.Labels{
-		"name": s.ProbeName,
-		"exit": fmt.Sprintf("%d", s.exitCode),
-	}).Set(float64(s.outputLen))
+	s.metrics.OutputLen.With(metric.AddConstLabels(prometheus.Labels{
+		"name":     s.ProbeName,
+		"exit":     fmt.Sprintf("%d", s.exitCode),
+		"endpoint": s.ProbeResult.Endpoint,
+	}, s.Labels)).Set(float64(s.outputLen))
 }

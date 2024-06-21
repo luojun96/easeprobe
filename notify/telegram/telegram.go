@@ -20,7 +20,7 @@ package telegram
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 
@@ -28,6 +28,11 @@ import (
 	"github.com/megaease/easeprobe/notify/base"
 	"github.com/megaease/easeprobe/report"
 	log "github.com/sirupsen/logrus"
+)
+
+const (
+	// MaxMessageLength is the max message length of a Telegram bot
+	MaxMessageLength = 4096
 )
 
 // NotifyConfig is the telegram notification configuration
@@ -47,9 +52,31 @@ func (c *NotifyConfig) Config(gConf global.NotifySettings) error {
 	return nil
 }
 
+// splitMessage splits the message into parts
+func splitMessage(message string) []string {
+	var parts []string
+	for len(message) > 0 {
+		if len(message) > MaxMessageLength {
+			parts = append(parts, message[:MaxMessageLength])
+			message = message[MaxMessageLength:]
+		} else {
+			parts = append(parts, message)
+			message = ""
+		}
+	}
+	return parts
+}
+
 // SendTelegram is the wrapper for SendTelegramNotification
 func (c *NotifyConfig) SendTelegram(title, text string) error {
-	return c.SendTelegramNotification(text)
+	parts := splitMessage(text)
+	for _, part := range parts {
+		err := c.SendTelegramNotification(part)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // SendTelegramNotification will send the notification to telegram.
@@ -73,7 +100,7 @@ func (c *NotifyConfig) SendTelegramNotification(text string) error {
 	}
 	defer resp.Body.Close()
 
-	buf, err := ioutil.ReadAll(resp.Body)
+	buf, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}

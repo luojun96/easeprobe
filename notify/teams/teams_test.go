@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"reflect"
 	"strings"
@@ -34,11 +33,12 @@ import (
 )
 
 func assertError(t *testing.T, err error, msg string) {
+	t.Helper()
 	assert.Error(t, err)
 	assert.Equal(t, msg, err.Error())
 }
 
-func TestSlack(t *testing.T) {
+func TestTeams(t *testing.T) {
 	conf := &NotifyConfig{}
 	conf.NotifyName = "dummy"
 	err := conf.Config(global.NotifySettings{})
@@ -48,7 +48,7 @@ func TestSlack(t *testing.T) {
 
 	var client http.Client
 	monkey.PatchInstanceMethod(reflect.TypeOf(&client), "Do", func(_ *http.Client, req *http.Request) (*http.Response, error) {
-		r := ioutil.NopCloser(strings.NewReader(`ok`))
+		r := io.NopCloser(strings.NewReader(`ok`))
 		return &http.Response{
 			StatusCode: 200,
 			Body:       r,
@@ -58,16 +58,16 @@ func TestSlack(t *testing.T) {
 	assert.NoError(t, err)
 
 	monkey.PatchInstanceMethod(reflect.TypeOf(&client), "Do", func(_ *http.Client, req *http.Request) (*http.Response, error) {
-		r := ioutil.NopCloser(strings.NewReader(`not found`))
+		r := io.NopCloser(strings.NewReader(`not found`))
 		return &http.Response{
 			StatusCode: 404,
 			Body:       r,
 		}, nil
 	})
 	err = conf.SendTeamsMessage("title", "message")
-	assertError(t, err, "error response from Teams Webhook - code [404] - msg [not found]")
+	assertError(t, err, "error response from Teams Webhook with request body <{\"@type\":\"MessageCard\",\"@context\":\"https://schema.org/extensions\",\"title\":\"title\",\"text\":\"message\"}> - code [404] - msg [not found]")
 
-	monkey.Patch(ioutil.ReadAll, func(_ io.Reader) ([]byte, error) {
+	monkey.Patch(io.ReadAll, func(_ io.Reader) ([]byte, error) {
 		return nil, errors.New("read error")
 	})
 	err = conf.SendTeamsMessage("title", "message")

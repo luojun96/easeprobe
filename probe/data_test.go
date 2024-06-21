@@ -19,7 +19,6 @@ package probe
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -27,9 +26,11 @@ import (
 	"time"
 
 	"bou.ke/monkey"
-	"github.com/megaease/easeprobe/global"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
+
+	"github.com/megaease/easeprobe/global"
 )
 
 var testResults = []Result{
@@ -218,7 +219,7 @@ func TestLoadDataFile(t *testing.T) {
 
 	// errors - read error
 	newDataFile(file)
-	monkey.Patch(ioutil.ReadFile, func(filename string) ([]byte, error) {
+	monkey.Patch(os.ReadFile, func(filename string) ([]byte, error) {
 		return nil, fmt.Errorf("error")
 	})
 	err = LoadDataFromFile(file)
@@ -345,6 +346,13 @@ type DummyProbe struct {
 	MyChannels []string
 	MyTimeout  time.Duration
 	MyInterval time.Duration
+}
+
+func (d *DummyProbe) LabelMap() prometheus.Labels {
+	return prometheus.Labels{}
+}
+
+func (d *DummyProbe) SetLabelMap(l prometheus.Labels) {
 }
 
 func (d *DummyProbe) Kind() string {

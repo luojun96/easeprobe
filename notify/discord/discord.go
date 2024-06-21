@@ -22,7 +22,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -343,12 +343,12 @@ func (c *NotifyConfig) SendDiscordNotification(discord Discord, tag string) erro
 	}
 	defer resp.Body.Close()
 
-	buf, err := ioutil.ReadAll(resp.Body)
+	buf, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
 	if resp.StatusCode != 204 {
-		return &global.ErrNoRetry{Message: fmt.Sprintf("Error response from Discord [%d] - [%s]", resp.StatusCode, string(buf))}
+		return &global.ErrNoRetry{Message: fmt.Sprintf("Error response from Discord with request body <%s> [%d] - [%s]", json, resp.StatusCode, string(buf))}
 	}
 	return nil
 }

@@ -20,8 +20,9 @@ package wecom
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/megaease/easeprobe/global"
@@ -64,6 +65,10 @@ func (c *NotifyConfig) SendWecomNotification(msg string) error {
 		}
 	}
 	`, report.JSONEscape(msg))
+	if !json.Valid([]byte(msgContent)) {
+		log.Errorf("[%s / %s ] - %v, err: invalid json", c.Kind(), c.Name(), msgContent)
+	}
+
 	req, err := http.NewRequest(http.MethodPost, c.WebhookURL, bytes.NewBuffer([]byte(msgContent)))
 	if err != nil {
 		return err
@@ -79,12 +84,12 @@ func (c *NotifyConfig) SendWecomNotification(msg string) error {
 	}
 	defer resp.Body.Close()
 
-	buf, err := ioutil.ReadAll(resp.Body)
+	buf, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("Error response from Wecom - code [%d] - msg [%s]", resp.StatusCode, string(buf))
+		return fmt.Errorf("Error response from Wecom with request body <%s> - code [%d] - msg [%s]", msgContent, resp.StatusCode, string(buf))
 	}
 	// It will be better to check response body.
 	return nil

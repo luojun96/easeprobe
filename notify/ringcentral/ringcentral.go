@@ -20,9 +20,9 @@ package ringcentral
 
 import (
 	"bytes"
-	"errors"
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/megaease/easeprobe/global"
@@ -75,6 +75,9 @@ func (c *NotifyConfig) SendRingCentral(title, msg string) error {
 		]
 	 }
 	`, report.JSONEscape(title), report.JSONEscape(msg))
+	if !json.Valid([]byte(msgContent)) {
+		log.Errorf("[%s / %s ] - %v, err: invalid json", c.Kind(), c.Name(), msgContent)
+	}
 
 	req, err := http.NewRequest(http.MethodPost, c.WebhookURL, bytes.NewBuffer([]byte(msgContent)))
 	if err != nil {
@@ -92,16 +95,15 @@ func (c *NotifyConfig) SendRingCentral(title, msg string) error {
 
 	defer resp.Body.Close()
 
-	buf, err := ioutil.ReadAll(resp.Body)
+	buf, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
 	if resp.StatusCode != 200 {
-		log.Debugf(msg)
-		return fmt.Errorf("Error response from RingCentral - code [%d] - msg [%s]", resp.StatusCode, string(buf))
+		return fmt.Errorf("Error response from RingCentral with request body <%s> - code [%d] - msg [%s]", msgContent, resp.StatusCode, string(buf))
 	}
 	if string(buf) != "{\"status\":\"OK\"}" {
-		return errors.New("Non-ok response returned from RingCentral " + string(buf))
+		return fmt.Errorf("Non-ok response returned from RingCentral with request body <%s>, %s", msgContent, string(buf))
 	}
 	return nil
 }
